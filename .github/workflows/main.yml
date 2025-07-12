@@ -1,0 +1,63 @@
+name: Deploy Lambda to AWS
+
+on:
+  push:
+    branches:
+      - master  # or your deployment branch
+
+permissions:
+  id-token: write  # Required for OIDC
+  contents: read   # To checkout the repo
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    #environment: production  # optional GitHub environment
+
+
+    env:
+      APPLICATION_NAME: imageworkflow
+
+    steps:
+      - name: Set environment based on branch
+        id: set-env
+        run: |
+          BRANCH_NAME="${GITHUB_REF##*/}"
+
+          if [[ "$BRANCH_NAME" == "dev" ]]; then
+            ENVIRONMENT="dev"
+          elif [[ "$BRANCH_NAME" == "master" ]]; then
+            ENVIRONMENT="prod"
+          else
+            ENVIRONMENT="$BRANCH_NAME"
+          fi
+
+          echo "ENVIRONMENT=$ENVIRONMENT" >> $GITHUB_ENV
+          echo "Mapped branch '$BRANCH_NAME' to environment '$ENVIRONMENT'"
+    
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/${{ vars.AWS_ROLE_NAME }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+
+      - name: Deploy CloudFormation
+        run: |
+          aws cloudformation deploy \
+            --template-file infra/01_bootstrap.yaml \
+            --stack-name ${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-bootstrap-stack \
+            --parameter-overrides \
+              ApplicationName=${{ env.APPLICATION_NAME }} \
+              Environment=${{ env.ENVIRONMENT }} \
+            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+            --tags Project=${{ env.APPLICATION_NAME }} Environment=${{ env.ENVIRONMENT }}
+      
+      # - name: Upload Lambda ZIP
+      #   run: |
+      #     aws s3 cp image_resizer_code.zip \
+      #       s3://${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-assets-bucket/lambdas/image_resizer_code.zip      
