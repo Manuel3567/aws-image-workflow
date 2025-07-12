@@ -1,0 +1,17 @@
+[project]
+name = "image-resizer"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Manuel Schuler", email = "60062851+Manuel3567@users.noreply.github.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "boto3>=1.39.4",
+    "pillow>=11.3.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

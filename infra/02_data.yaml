@@ -1,0 +1,82 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  ApplicationName:
+    Type: String
+    Default: imageresizer
+
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, test, prod]
+  
+Resources:
+  UploadS3Bucket:
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: Retain  # Prevent bucket deletion on stack removal
+    Properties:
+      BucketName: !Sub "${ApplicationName}-${Environment}-upload-bucket-${AWS::AccountId}"
+      VersioningConfiguration:
+        Status: Enabled  # Enable versioning
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireOldVersions
+            Status: Enabled
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 30  # Delete previous versions after 30 days
+          - Id: CleanIncompleteMultipartUploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7  # Abort incomplete uploads after 7 days
+              
+  ResizeS3Bucket:
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: Retain  # Prevent bucket deletion on stack removal
+    Properties:
+      BucketName: !Sub "${ApplicationName}-${Environment}-resize-bucket-${AWS::AccountId}"
+      VersioningConfiguration:
+        Status: Enabled  # Enable versioning
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireOldVersions
+            Status: Enabled
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 30  # Delete previous versions after 30 days
+          - Id: CleanIncompleteMultipartUploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7  # Abort incomplete uploads after 7 days
+
+
+
+  ImageMetadataTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${ApplicationName}-${Environment}-metadata-table'
+      AttributeDefinitions:
+        - AttributeName: ImageID
+          AttributeType: S
+      KeySchema:
+        - AttributeName: ImageID
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST  # On-demand capacity
+  
+Outputs:
+  ImageMetadataTableName:
+    Description: "DynamoDB table name for image metadata"
+    Value: !Ref ImageMetadataTable
+    Export:
+      Name: !Sub "${ApplicationName}-${Environment}-metadata-table"
+
+
+  ImageUploadBucketName:
+    Description: "S3 bucket name for image uploads"
+    Value: !Ref UploadS3Bucket
+    Export:
+      Name: !Sub "${ApplicationName}-${Environment}-upload-bucket"
+
+  ImageResizeBucketName:
+    Description: "S3 bucket name for image uploads"
+    Value: !Ref ResizeS3Bucket
+    Export:
+      Name: !Sub "${ApplicationName}-${Environment}-resize-bucket"

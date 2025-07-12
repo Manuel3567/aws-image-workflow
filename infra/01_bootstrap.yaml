@@ -1,0 +1,38 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  ApplicationName:
+    Type: String
+    Default: imageresizer
+
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, test, prod]
+  
+Resources:
+  S3Bucket:
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: Retain  # Prevent bucket deletion on stack removal
+    Properties:
+      BucketName: !Sub "${ApplicationName}-${Environment}-assets-${AWS::AccountId}"
+      VersioningConfiguration:
+        Status: Enabled  # Enable versioning
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireOldVersions
+            Status: Enabled
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 30  # Delete previous versions after 30 days
+          - Id: CleanIncompleteMultipartUploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7  # Abort incomplete uploads after 7 days
+  
+Outputs:
+
+  AssetsBucketName:
+    Description: "S3 bucket name for image uploads"
+    Value: !Ref S3Bucket
+    Export:
+      Name: !Sub "${ApplicationName}-${Environment}-assets-bucket"

@@ -1,0 +1,59 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  ApplicationName:
+    Type: String
+    Default: imageresizer
+
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, test, prod]
+  
+Resources:
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ApplicationName}-${Environment}-image-processor-role' 
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: LambdaDynamoS3Access
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:GetItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                Resource: !ImportValue !Sub '${ApplicationName}-${Environment}-metadata-table'
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                Resource: !ImportValue !Sub "${ApplicationName}-${Environment}-upload-bucket"
+
+  ImageProcessingLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ApplicationName}-${Environment}-image-processor'
+      Handler: image_resizer.handler.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !ImportValue !Sub "${ApplicationName}-${Environment}-assets-bucket"
+        S3Key: lambdas/image_resizer_code.zip
+      Runtime: python3.13
+      Environment:
+        Variables:
+          UPLOAD_BUCKET_NAME: !ImportValue !Sub "${ApplicationName}-${Environment}-upload-bucket"
+          RESIZE_BUCKET_NAME: !ImportValue !Sub "${ApplicationName}-${Environment}-resize-bucket"
+          TABLE_NAME:  !ImportValue !Sub "${ApplicationName}-${Environment}-metadata-table"
