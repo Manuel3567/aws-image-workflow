@@ -1,0 +1,73 @@
+name: Delete Application Resources
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to delete (e.g., dev, prod)'
+        required: true
+        default: 'dev'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  delete:
+    runs-on: ubuntu-latest
+
+    env:
+      APPLICATION_NAME: imageworkflow
+      ENVIRONMENT: ${{ github.event.inputs.environment }}
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ secrets.AWS_ROLE_NAME }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Delete orchestrator stack
+        run: |
+          STACK_NAME="${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-orchestration-stack"
+          echo "Deleting stack $STACK_NAME..."
+          aws cloudformation delete-stack --stack-name "$STACK_NAME"
+          aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"
+
+      - name: Delete compute stack
+        run: |
+          STACK_NAME="${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-compute-stack"
+          echo "Deleting stack $STACK_NAME..."
+          aws cloudformation delete-stack --stack-name "$STACK_NAME"
+          aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"
+
+      - name: Empty upload and resize S3 buckets
+        run: |
+          for BUCKET_SUFFIX in upload resize; do
+            BUCKET="${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-${BUCKET_SUFFIX}-${{ secrets.AWS_ACCOUNT_ID }}"
+            echo "Emptying bucket: $BUCKET"
+            aws s3 rm s3://$BUCKET --recursive || echo "Bucket $BUCKET not found or already empty"
+          done
+
+      - name: Delete data stack
+        run: |
+          STACK_NAME="${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-data-stack"
+          echo "Deleting stack $STACK_NAME..."
+          aws cloudformation delete-stack --stack-name "$STACK_NAME"
+          aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"
+
+      - name: Delete Lambda zips from assets bucket
+        run: |
+          BUCKET="${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-assets-${{ secrets.AWS_ACCOUNT_ID }}"
+          echo "Emptying Lambda artifacts bucket: $BUCKET"
+          aws s3 rm s3://$BUCKET --recursive || echo "Bucket $BUCKET not found or already empty"
+          
+      - name: Delete bootstrap stack
+        run: |
+          STACK_NAME="${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-bootstrap-stack"
+          echo "Deleting stack $STACK_NAME..."
+          aws cloudformation delete-stack --stack-name "$STACK_NAME"
+          aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"
