@@ -82,19 +82,22 @@ jobs:
         run: |
           cd app/image_resizer
 
-          # Build the wheel
           uv build
-
-          # Install the wheel to the 'build' directory
           uv pip install --target build ./dist/image_resizer-0.1.0-py3-none-any.whl
 
-          # Zip the contents of the build directory
           cd build
           zip -r ../image_resizer_code.zip *
           cd ..
-        
+
+          # Generate a unique key using timestamp or short commit hash
+          VERSION_ID=$(date +%Y%m%d%H%M%S)-${GITHUB_SHA::8}
+          S3_KEY="lambdas/image_resizer_code-${VERSION_ID}.zip"
+
+          echo "IMAGE_RESIZE_LAMBDA_CODE_KEY=$S3_KEY" >> $GITHUB_ENV
+
           aws s3 cp image_resizer_code.zip \
-            s3://${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-assets-${{ secrets.AWS_ACCOUNT_ID }}/lambdas/image_resizer_code.zip      
+            s3://${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-assets-${{ secrets.AWS_ACCOUNT_ID }}/$S3_KEY
+      
 
       - name: Check and delete compute stack if in ROLLBACK_COMPLETE
         run: |
@@ -118,6 +121,7 @@ jobs:
             --parameter-overrides \
               ApplicationName=${{ env.APPLICATION_NAME }} \
               Environment=${{ env.ENVIRONMENT }} \
+              LambdaCodeKey=${{ env.IMAGE_RESIZE_LAMBDA_CODE_KEY }} \
             --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
             --no-fail-on-empty-changeset \
             --tags Project=${{ env.APPLICATION_NAME }} Environment=${{ env.ENVIRONMENT }}
@@ -146,4 +150,18 @@ jobs:
               Environment=${{ env.ENVIRONMENT }} \
             --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
             --no-fail-on-empty-changeset \
-            --tags Project=${{ env.APPLICATION_NAME }} Environment=${{ env.ENVIRONMENT }}             
+            --tags Project=${{ env.APPLICATION_NAME }} Environment=${{ env.ENVIRONMENT }}
+
+      - name: Prune old Lambda zips
+        run: |
+          BUCKET="${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-assets-${{ secrets.AWS_ACCOUNT_ID }}"
+          
+          # List zip files sorted by last modified, skip the most recent N
+          aws s3api list-objects-v2 --bucket "$BUCKET" --prefix "lambdas/image_resizer_code" \
+            --query "sort_by(Contents, &LastModified)[0:-5].Key" --output text |
+          tr '\t' '\n' |
+          while read key; do
+            echo "Deleting $key"
+            aws s3 rm "s3://$BUCKET/$key"
+          done
+          

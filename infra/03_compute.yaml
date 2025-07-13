@@ -9,6 +9,11 @@ Parameters:
     Type: String
     Default: dev
     AllowedValues: [dev, test, prod]
+
+  LambdaCodeKey:
+    Type: String
+    Description: S3 key for Lambda function code
+
   
 Resources:
   LambdaExecutionRole:
@@ -84,7 +89,7 @@ Resources:
       Code:
         S3Bucket:
           Fn::ImportValue: !Sub "${ApplicationName}-${Environment}-assets-bucket"
-        S3Key: lambdas/image_resizer_code.zip
+        S3Key: !Ref LambdaCodeKey
       Runtime: python3.13
       MemorySize: 1024
       Environment:
