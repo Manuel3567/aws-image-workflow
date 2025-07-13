@@ -10,6 +10,10 @@ on:
     branches:
       - '**'
 
+  delete:
+    branches:
+      - '**'
+
 permissions:
   id-token: write
   contents: read

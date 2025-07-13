@@ -8,7 +8,6 @@ Parameters:
   Environment:
     Type: String
     Default: dev
-    AllowedValues: [dev, test, prod]
 
   LambdaCodeKey:
     Type: String
