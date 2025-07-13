@@ -54,8 +54,8 @@ jobs:
             --parameter-overrides \
               ApplicationName=${{ env.APPLICATION_NAME }} \
               Environment=${{ env.ENVIRONMENT }} \
-            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
-            --no-fail-on-empty-changeset
+            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+            --no-fail-on-empty-changeset \
             --tags Project=${{ env.APPLICATION_NAME }} Environment=${{ env.ENVIRONMENT }}
 
       - name: Deploy Data
@@ -66,8 +66,8 @@ jobs:
             --parameter-overrides \
               ApplicationName=${{ env.APPLICATION_NAME }} \
               Environment=${{ env.ENVIRONMENT }} \
-            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
-            --no-fail-on-empty-changeset
+            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+            --no-fail-on-empty-changeset \
             --tags Project=${{ env.APPLICATION_NAME }} Environment=${{ env.ENVIRONMENT }}     
 
       # - name: Upload Lambda ZIP
