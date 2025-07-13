@@ -86,6 +86,7 @@ Resources:
           Fn::ImportValue: !Sub "${ApplicationName}-${Environment}-assets-bucket"
         S3Key: lambdas/image_resizer_code.zip
       Runtime: python3.13
+      MemorySize: 1024
       Environment:
         Variables:
           UPLOAD_BUCKET_NAME:
@@ -94,3 +95,16 @@ Resources:
             Fn::ImportValue: !Sub "${ApplicationName}-${Environment}-resize-bucket"
           TABLE_NAME:
             Fn::ImportValue: !Sub "${ApplicationName}-${Environment}-metadata-table"
+
+Outputs:
+  ImageProcessingLambdaArn:
+    Description: "image processing lambda ARN"
+    Value: !GetAtt ImageProcessingLambda.Arn
+    Export:
+      Name: !Sub "${ApplicationName}-${Environment}-image-processing-lambda-arn"
+
+  ImageProcessingLambdaName:
+    Description: "image processing lambda name"
+    Value: !Ref ImageProcessingLambda
+    Export:
+      Name: !Sub "${ApplicationName}-${Environment}-image-processing-lambda-name"

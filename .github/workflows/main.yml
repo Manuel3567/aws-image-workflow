@@ -121,4 +121,29 @@ jobs:
             --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
             --no-fail-on-empty-changeset \
             --tags Project=${{ env.APPLICATION_NAME }} Environment=${{ env.ENVIRONMENT }}
-             
+
+      - name: Check and delete orchestration stack if in ROLLBACK_COMPLETE
+        run: |
+          STACK_NAME="${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-orchestration-stack"
+          STATUS=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].StackStatus" --output text 2>/dev/null || echo "STACK_DOES_NOT_EXIST")
+
+          if [[ "$STATUS" == "ROLLBACK_COMPLETE" ]]; then
+            echo "Stack $STACK_NAME is in ROLLBACK_COMPLETE state. Deleting..."
+            aws cloudformation delete-stack --stack-name "$STACK_NAME"
+            echo "Waiting for stack deletion to complete..."
+            aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"
+          else
+            echo "Stack status is $STATUS. No deletion needed."
+          fi
+
+      - name: Deploy orchestrator
+        run: |
+          aws cloudformation deploy \
+            --template-file infra/04_orchestrator.yaml \
+            --stack-name ${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-orchestration-stack \
+            --parameter-overrides \
+              ApplicationName=${{ env.APPLICATION_NAME }} \
+              Environment=${{ env.ENVIRONMENT }} \
+            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+            --no-fail-on-empty-changeset \
+            --tags Project=${{ env.APPLICATION_NAME }} Environment=${{ env.ENVIRONMENT }}             

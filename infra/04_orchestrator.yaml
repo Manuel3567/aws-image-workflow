@@ -1,0 +1,40 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  ApplicationName:
+    Type: String
+    Default: imageresizer
+
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, test, prod]
+  
+Resources:
+  EventRule:
+    Type: AWS::Events::Rule
+    Properties: 
+      Description: "EventRule"
+      EventPattern: 
+        source: 
+          - "aws.s3"
+        detail-type: 
+          - "Object Created"
+        detail: 
+          bucket:
+            name:
+              - Fn::ImportValue: !Sub "${ApplicationName}-${Environment}-upload-bucket"
+      State: "ENABLED"
+      Targets:
+        - Arn:
+            Fn::ImportValue: !Sub "${ApplicationName}-${Environment}-image-processing-lambda-arn"
+          Id: "TargetFunctionV1"
+   
+  PermissionForEventsToInvokeLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Fn::ImportValue: !Sub "${ApplicationName}-${Environment}-image-processing-lambda-name"
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: !GetAtt EventRule.Arn
