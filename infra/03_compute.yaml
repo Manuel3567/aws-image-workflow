@@ -100,6 +100,7 @@ Resources:
             Fn::ImportValue: !Sub "${ApplicationName}-${Environment}-resize-bucket"
           TABLE_NAME:
             Fn::ImportValue: !Sub "${ApplicationName}-${Environment}-metadata-table"
+          REGION: !Ref "AWS::Region"
 
 Outputs:
   ImageProcessingLambdaArn:

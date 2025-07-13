@@ -1,0 +1,29 @@
+{
+  "version": "0",
+  "id": "111-222-abc",
+  "detail-type": "Object Created",
+  "source": "aws.s3",
+  "account": "123456789101",
+  "time": "2024-01-13T13:35:40Z",
+  "region": "eu-central-1",
+  "resources": [
+    "arn:aws:s3:::imageworkflow-prod-upload-bucket-123456789101"
+  ],
+  "detail": {
+    "version": "0",
+    "bucket": {
+      "name": "imageworkflow-prod-upload-bucket-123456789101"
+    },
+    "object": {
+      "key": "0dde45c1-4c61-4084-946a-4f24bf0068a9.jpg",
+      "size": 168622,
+      "etag": "6f62e0e3eb505bfe70d5f749e25029e5",
+      "version-id": "hGldS4VHYAF_H6B0Ih7Ujkry.o.WUBBi",
+      "sequencer": "006873B62CDD1F4116"
+    },
+    "request-id": "BZ1B8XFQYJC53K1C",
+    "requester": "123456789101",
+    "source-ip-address": "1.2.3.4",
+    "reason": "PutObject"
+  }
+}

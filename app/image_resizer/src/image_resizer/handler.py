@@ -1,45 +1,41 @@
+# image_resizer/handler.py
+
 import os
 import boto3
 from PIL import Image
 from io import BytesIO
 
-# Load environment variables
 UPLOAD_BUCKET = os.environ['UPLOAD_BUCKET_NAME']
 RESIZE_BUCKET = os.environ['RESIZE_BUCKET_NAME']
 TABLE_NAME = os.environ['TABLE_NAME']
+REGION = os.environ.get('REGION', "eu-central-1")
 
-# AWS clients
+
 s3 = boto3.client('s3')
-dynamodb = boto3.resource('dynamodb')
+dynamodb = boto3.resource('dynamodb', region_name=REGION)
 table = dynamodb.Table(TABLE_NAME)
 
 def lambda_handler(event, context):
-
     try:
-        # Extract key and bucket from EventBridge event
         detail = event['detail']
         bucket_name = detail['bucket']['name']
         object_key = detail['object']['key']
 
-        # Validate it's from the expected upload bucket
         if bucket_name != UPLOAD_BUCKET:
             raise ValueError(f"Ignoring object from unexpected bucket: {bucket_name}")
 
         image_id = os.path.splitext(os.path.basename(object_key))[0]
         print(f"Processing image {object_key} for ImageID: {image_id}")
 
-        # 1. Download original image
         s3_response = s3.get_object(Bucket=UPLOAD_BUCKET, Key=object_key)
         image_data = s3_response['Body'].read()
         image = Image.open(BytesIO(image_data))
 
-        # 2. Resize (128x128)
         image.thumbnail((128, 128))
         buffer = BytesIO()
         image.save(buffer, format='JPEG')
         buffer.seek(0)
 
-        # 3. Upload resized image
         resized_key = f"resized/{object_key}"
         s3.put_object(
             Bucket=RESIZE_BUCKET,
@@ -48,7 +44,6 @@ def lambda_handler(event, context):
             ContentType='image/jpeg'
         )
 
-        # 4. Save metadata to DynamoDB
         table.put_item(
             Item={
                 'ImageID': image_id,
