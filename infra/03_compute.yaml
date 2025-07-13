@@ -49,7 +49,8 @@ Resources:
       Handler: image_resizer.handler.lambda_handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Code:
-        S3Bucket: Fn::ImportValue !Sub "${ApplicationName}-${Environment}-assets-bucket"
+        S3Bucket:
+          Fn::ImportValue: !Sub "${ApplicationName}-${Environment}-assets-bucket"
         S3Key: lambdas/image_resizer_code.zip
       Runtime: python3.13
       Environment:
