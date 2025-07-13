@@ -14,6 +14,7 @@ dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(TABLE_NAME)
 
 def lambda_handler(event, context):
+    print(event)
     image_id = event['ImageID']
     original_key = event['s3_key']
     
