@@ -70,15 +70,17 @@ jobs:
           aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME" || echo "Failed or already deleted"
           set -e
 
-      - name: Empty upload and resize S3 buckets
+      - name: Empty and delete upload and resize S3 buckets
         run: |
-          set +e
-          for BUCKET_SUFFIX in upload resize; do
+            set +e
+            for BUCKET_SUFFIX in upload resize; do
             BUCKET="${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-${BUCKET_SUFFIX}-bucket-${{ secrets.AWS_ACCOUNT_ID }}"
             echo "Emptying bucket: $BUCKET"
             aws s3 rm s3://$BUCKET --recursive || echo "Bucket $BUCKET not found or already empty"
-          done
-          set -e
+            echo "Deleting bucket: $BUCKET"
+            aws s3api delete-bucket --bucket $BUCKET || echo "Bucket $BUCKET could not be deleted (may not exist or not empty)"
+            done
+            set -e
 
       - name: Delete data stack
         run: |
@@ -95,6 +97,8 @@ jobs:
           BUCKET="${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-assets-${{ secrets.AWS_ACCOUNT_ID }}"
           echo "Emptying Lambda artifacts bucket: $BUCKET"
           aws s3 rm s3://$BUCKET --recursive || echo "Bucket $BUCKET not found or already empty"
+          echo "Deleting bucket: $BUCKET"
+          aws s3api delete-bucket --bucket $BUCKET || echo "Bucket $BUCKET could not be deleted (may not exist or not empty)"          
           set -e
 
       - name: Delete bootstrap stack
