@@ -3,7 +3,10 @@ name: Deploy Application
 on:
   push:
     branches:
-      - master  # or your deployment branch
+      - '**'
+  create:
+    branches:
+      - '**'
 
 permissions:
   id-token: write  # Required for OIDC

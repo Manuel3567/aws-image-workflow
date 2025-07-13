@@ -8,6 +8,10 @@ on:
         required: true
         default: 'dev'
 
+  delete:
+    branches:
+      - '**'
+
 permissions:
   id-token: write
   contents: read
@@ -64,7 +68,7 @@ jobs:
           BUCKET="${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-assets-${{ secrets.AWS_ACCOUNT_ID }}"
           echo "Emptying Lambda artifacts bucket: $BUCKET"
           aws s3 rm s3://$BUCKET --recursive || echo "Bucket $BUCKET not found or already empty"
-          
+
       - name: Delete bootstrap stack
         run: |
           STACK_NAME="${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-bootstrap-stack"
