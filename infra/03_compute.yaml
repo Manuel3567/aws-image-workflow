@@ -36,13 +36,23 @@ Resources:
                   - dynamodb:UpdateItem
                   - dynamodb:DeleteItem
                 Resource:
-                  Fn::ImportValue: !Sub '${ApplicationName}-${Environment}-metadata-table'
+                  Fn::ImportValue: !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ApplicationName}-${Environment}-metadata-table'
+
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource:
+                  - Fn::ImportValue: !Sub "arn:aws:s3:::${ApplicationName}-${Environment}-upload-bucket"
+                  - Fn::ImportValue: !Sub "arn:aws:s3:::${ApplicationName}-${Environment}-resize-bucket"
+
               - Effect: Allow
                 Action:
                   - s3:GetObject
                   - s3:PutObject
                 Resource:
-                  Fn::ImportValue: !Sub "${ApplicationName}-${Environment}-upload-bucket"
+                  - Fn::ImportValue: !Sub "arn:aws:s3:::${ApplicationName}-${Environment}-upload-bucket/*"
+                  - Fn::ImportValue: !Sub "arn:aws:s3:::${ApplicationName}-${Environment}-resize-bucket/*"
+
 
   ImageProcessingLambda:
     Type: AWS::Lambda::Function
