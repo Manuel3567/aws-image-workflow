@@ -5,8 +5,10 @@ on:
     inputs:
       environment:
         description: 'Environment to delete (e.g., dev, prod)'
-        required: true
-        default: 'dev'
+        required: false  # optional for auto-detection
+  delete:
+    branches:
+      - '**'
 
 permissions:
   id-token: write
@@ -18,7 +20,6 @@ jobs:
 
     env:
       APPLICATION_NAME: imageworkflow
-      ENVIRONMENT: ${{ github.event.inputs.environment }}
 
     steps:
       - name: Checkout source
@@ -29,6 +30,27 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ secrets.AWS_ROLE_NAME }}
           aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Determine environment
+        id: set-env
+        run: |
+          if [[ -n "${{ github.event.inputs.environment }}" ]]; then
+            RAW_ENV="${{ github.event.inputs.environment }}"
+          else
+            RAW_ENV="${GITHUB_REF##*/}"
+          fi
+
+          if [[ "$RAW_ENV" == "dev" ]]; then
+            ENVIRONMENT="dev"
+          elif [[ "$RAW_ENV" == "master" ]]; then
+            ENVIRONMENT="prod"
+          else
+            CLEANED=$(echo "$RAW_ENV" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9' | cut -c1-16)
+            ENVIRONMENT="$CLEANED"
+          fi
+
+          echo "ENVIRONMENT=$ENVIRONMENT" >> $GITHUB_ENV
+          echo "Mapped '$RAW_ENV' to environment '$ENVIRONMENT'"
 
       - name: Delete orchestrator stack
         run: |
@@ -64,7 +86,7 @@ jobs:
           BUCKET="${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-assets-${{ secrets.AWS_ACCOUNT_ID }}"
           echo "Emptying Lambda artifacts bucket: $BUCKET"
           aws s3 rm s3://$BUCKET --recursive || echo "Bucket $BUCKET not found or already empty"
-          
+
       - name: Delete bootstrap stack
         run: |
           STACK_NAME="${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-bootstrap-stack"
