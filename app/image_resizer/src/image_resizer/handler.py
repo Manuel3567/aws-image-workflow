@@ -14,26 +14,33 @@ dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(TABLE_NAME)
 
 def lambda_handler(event, context):
-    print(event)
-    image_id = event['ImageID']
-    original_key = event['s3_key']
-    
-    print(f"Processing image {original_key} for ImageID: {image_id}")
 
     try:
-        # 1. Download the original image from S3
-        s3_response = s3.get_object(Bucket=UPLOAD_BUCKET, Key=original_key)
+        # Extract key and bucket from EventBridge event
+        detail = event['detail']
+        bucket_name = detail['bucket']['name']
+        object_key = detail['object']['key']
+
+        # Validate it's from the expected upload bucket
+        if bucket_name != UPLOAD_BUCKET:
+            raise ValueError(f"Ignoring object from unexpected bucket: {bucket_name}")
+
+        image_id = os.path.splitext(os.path.basename(object_key))[0]
+        print(f"Processing image {object_key} for ImageID: {image_id}")
+
+        # 1. Download original image
+        s3_response = s3.get_object(Bucket=UPLOAD_BUCKET, Key=object_key)
         image_data = s3_response['Body'].read()
         image = Image.open(BytesIO(image_data))
 
-        # 2. Resize the image (example: thumbnail 128x128)
+        # 2. Resize (128x128)
         image.thumbnail((128, 128))
         buffer = BytesIO()
         image.save(buffer, format='JPEG')
         buffer.seek(0)
 
-        # 3. Upload resized image to the resize bucket
-        resized_key = f"resized/{original_key}"
+        # 3. Upload resized image
+        resized_key = f"resized/{object_key}"
         s3.put_object(
             Bucket=RESIZE_BUCKET,
             Key=resized_key,
@@ -41,11 +48,11 @@ def lambda_handler(event, context):
             ContentType='image/jpeg'
         )
 
-        # 4. Update metadata in DynamoDB
+        # 4. Save metadata to DynamoDB
         table.put_item(
             Item={
                 'ImageID': image_id,
-                'original_s3_key': original_key,
+                'original_s3_key': object_key,
                 'resized_s3_key': resized_key,
                 'status': 'resized'
             }
@@ -54,14 +61,13 @@ def lambda_handler(event, context):
         return {
             'status': 'resized',
             'ImageID': image_id,
-            'original_s3_key': original_key,
+            'original_s3_key': object_key,
             'resized_s3_key': resized_key
         }
 
     except Exception as e:
-        print(f"Error processing image {original_key}: {str(e)}")
+        print(f"Error: {str(e)}")
         return {
             'status': 'error',
-            'ImageID': image_id,
             'message': str(e)
         }
