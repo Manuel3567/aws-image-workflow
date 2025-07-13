@@ -35,12 +35,12 @@ Resources:
                   - dynamodb:GetItem
                   - dynamodb:UpdateItem
                   - dynamodb:DeleteItem
-                Resource: !ImportValue !Sub '${ApplicationName}-${Environment}-metadata-table'
+                Resource: Fn::ImportValue !Sub '${ApplicationName}-${Environment}-metadata-table'
               - Effect: Allow
                 Action:
                   - s3:GetObject
                   - s3:PutObject
-                Resource: !ImportValue !Sub "${ApplicationName}-${Environment}-upload-bucket"
+                Resource: Fn::ImportValue !Sub "${ApplicationName}-${Environment}-upload-bucket"
 
   ImageProcessingLambda:
     Type: AWS::Lambda::Function
@@ -49,11 +49,11 @@ Resources:
       Handler: image_resizer.handler.lambda_handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Code:
-        S3Bucket: !ImportValue !Sub "${ApplicationName}-${Environment}-assets-bucket"
+        S3Bucket: Fn::ImportValue !Sub "${ApplicationName}-${Environment}-assets-bucket"
         S3Key: lambdas/image_resizer_code.zip
       Runtime: python3.13
       Environment:
         Variables:
-          UPLOAD_BUCKET_NAME: !ImportValue !Sub "${ApplicationName}-${Environment}-upload-bucket"
-          RESIZE_BUCKET_NAME: !ImportValue !Sub "${ApplicationName}-${Environment}-resize-bucket"
-          TABLE_NAME:  !ImportValue !Sub "${ApplicationName}-${Environment}-metadata-table"
+          UPLOAD_BUCKET_NAME: Fn::ImportValue !Sub "${ApplicationName}-${Environment}-upload-bucket"
+          RESIZE_BUCKET_NAME: Fn::ImportValue !Sub "${ApplicationName}-${Environment}-resize-bucket"
+          TABLE_NAME: Fn::ImportValue !Sub "${ApplicationName}-${Environment}-metadata-table"
