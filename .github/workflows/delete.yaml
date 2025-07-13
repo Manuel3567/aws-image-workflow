@@ -54,42 +54,54 @@ jobs:
 
       - name: Delete orchestrator stack
         run: |
+          set +e
           STACK_NAME="${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-orchestration-stack"
           echo "Deleting stack $STACK_NAME..."
           aws cloudformation delete-stack --stack-name "$STACK_NAME"
-          aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"
+          aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME" || echo "Failed or already deleted"
+          set -e
 
       - name: Delete compute stack
         run: |
+          set +e
           STACK_NAME="${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-compute-stack"
           echo "Deleting stack $STACK_NAME..."
           aws cloudformation delete-stack --stack-name "$STACK_NAME"
-          aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"
+          aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME" || echo "Failed or already deleted"
+          set -e
 
       - name: Empty upload and resize S3 buckets
         run: |
+          set +e
           for BUCKET_SUFFIX in upload resize; do
-            BUCKET="${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-${BUCKET_SUFFIX}-${{ secrets.AWS_ACCOUNT_ID }}"
+            BUCKET="${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-${BUCKET_SUFFIX}-bucket-${{ secrets.AWS_ACCOUNT_ID }}"
             echo "Emptying bucket: $BUCKET"
             aws s3 rm s3://$BUCKET --recursive || echo "Bucket $BUCKET not found or already empty"
           done
+          set -e
 
       - name: Delete data stack
         run: |
+          set +e
           STACK_NAME="${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-data-stack"
           echo "Deleting stack $STACK_NAME..."
           aws cloudformation delete-stack --stack-name "$STACK_NAME"
-          aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"
+          aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME" || echo "Failed or already deleted"
+          set -e
 
       - name: Delete Lambda zips from assets bucket
         run: |
+          set +e
           BUCKET="${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-assets-${{ secrets.AWS_ACCOUNT_ID }}"
           echo "Emptying Lambda artifacts bucket: $BUCKET"
           aws s3 rm s3://$BUCKET --recursive || echo "Bucket $BUCKET not found or already empty"
+          set -e
 
       - name: Delete bootstrap stack
         run: |
+          set +e
           STACK_NAME="${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-bootstrap-stack"
           echo "Deleting stack $STACK_NAME..."
           aws cloudformation delete-stack --stack-name "$STACK_NAME"
-          aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"
+          aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME" || echo "Failed or already deleted"
+          set -e
