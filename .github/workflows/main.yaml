@@ -30,11 +30,14 @@ jobs:
           elif [[ "$BRANCH_NAME" == "master" ]]; then
             ENVIRONMENT="prod"
           else
-            ENVIRONMENT="$BRANCH_NAME"
+            # Convert to lowercase, remove non-alphanumeric chars, and truncate to 16 chars
+            CLEANED=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9' | cut -c1-16)
+            ENVIRONMENT="$CLEANED"
           fi
 
           echo "ENVIRONMENT=$ENVIRONMENT" >> $GITHUB_ENV
           echo "Mapped branch '$BRANCH_NAME' to environment '$ENVIRONMENT'"
+
     
       - name: Checkout source
         uses: actions/checkout@v4
