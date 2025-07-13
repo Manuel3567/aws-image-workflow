@@ -35,12 +35,14 @@ Resources:
                   - dynamodb:GetItem
                   - dynamodb:UpdateItem
                   - dynamodb:DeleteItem
-                Resource: Fn::ImportValue !Sub '${ApplicationName}-${Environment}-metadata-table'
+                Resource:
+                  Fn::ImportValue: !Sub '${ApplicationName}-${Environment}-metadata-table'
               - Effect: Allow
                 Action:
                   - s3:GetObject
                   - s3:PutObject
-                Resource: Fn::ImportValue !Sub "${ApplicationName}-${Environment}-upload-bucket"
+                Resource:
+                  Fn::ImportValue: !Sub "${ApplicationName}-${Environment}-upload-bucket"
 
   ImageProcessingLambda:
     Type: AWS::Lambda::Function
@@ -55,6 +57,9 @@ Resources:
       Runtime: python3.13
       Environment:
         Variables:
-          UPLOAD_BUCKET_NAME: Fn::ImportValue !Sub "${ApplicationName}-${Environment}-upload-bucket"
-          RESIZE_BUCKET_NAME: Fn::ImportValue !Sub "${ApplicationName}-${Environment}-resize-bucket"
-          TABLE_NAME: Fn::ImportValue !Sub "${ApplicationName}-${Environment}-metadata-table"
+          UPLOAD_BUCKET_NAME:
+            Fn::ImportValue: !Sub "${ApplicationName}-${Environment}-upload-bucket"
+          RESIZE_BUCKET_NAME:
+            Fn::ImportValue: !Sub "${ApplicationName}-${Environment}-resize-bucket"
+          TABLE_NAME:
+            Fn::ImportValue: !Sub "${ApplicationName}-${Environment}-metadata-table"
