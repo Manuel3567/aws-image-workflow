@@ -96,6 +96,20 @@ jobs:
           aws s3 cp image_resizer_code.zip \
             s3://${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-assets-${{ secrets.AWS_ACCOUNT_ID }}/lambdas/image_resizer_code.zip      
 
+      - name: Check and delete compute stack if in ROLLBACK_COMPLETE
+        run: |
+          STACK_NAME="${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-compute-stack"
+          STATUS=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].StackStatus" --output text 2>/dev/null || echo "STACK_DOES_NOT_EXIST")
+
+          if [[ "$STATUS" == "ROLLBACK_COMPLETE" ]]; then
+            echo "Stack $STACK_NAME is in ROLLBACK_COMPLETE state. Deleting..."
+            aws cloudformation delete-stack --stack-name "$STACK_NAME"
+            echo "Waiting for stack deletion to complete..."
+            aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"
+          else
+            echo "Stack status is $STATUS. No deletion needed."
+          fi
+
       - name: Deploy Compute
         run: |
           aws cloudformation deploy \
@@ -106,4 +120,5 @@ jobs:
               Environment=${{ env.ENVIRONMENT }} \
             --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
             --no-fail-on-empty-changeset \
-            --tags Project=${{ env.APPLICATION_NAME }} Environment=${{ env.ENVIRONMENT }}              
+            --tags Project=${{ env.APPLICATION_NAME }} Environment=${{ env.ENVIRONMENT }}
+             
