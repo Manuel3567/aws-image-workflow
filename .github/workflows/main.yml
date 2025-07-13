@@ -91,6 +91,7 @@ jobs:
           # Zip the contents of the build directory
           cd build
           zip -r ../image_resizer_code.zip *
+          cd ..
         
           aws s3 cp image_resizer_code.zip \
             s3://${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-assets-${{ secrets.AWS_ACCOUNT_ID }}/lambdas/image_resizer_code.zip      
