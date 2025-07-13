@@ -91,15 +91,35 @@ jobs:
           aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME" || echo "Failed or already deleted"
           set -e
 
-      - name: Delete Lambda zips from assets bucket
+      - name: Delete Lambda zips from assets bucket including versions
         run: |
-          set +e
-          BUCKET="${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-assets-${{ secrets.AWS_ACCOUNT_ID }}"
-          echo "Emptying Lambda artifacts bucket: $BUCKET"
-          aws s3 rm s3://$BUCKET --recursive || echo "Bucket $BUCKET not found or already empty"
-          echo "Deleting bucket: $BUCKET"
-          aws s3api delete-bucket --bucket $BUCKET || echo "Bucket $BUCKET could not be deleted (may not exist or not empty)"          
-          set -e
+            set +e
+            BUCKET="${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-assets-${{ secrets.AWS_ACCOUNT_ID }}"
+            echo "Emptying Lambda artifacts bucket including versions: $BUCKET"
+
+            # Delete all object versions and delete markers
+            aws s3api list-object-versions --bucket $BUCKET --output json | \
+            jq -r '.Versions[] | "\(.Key) \(.VersionId)"' | \
+            while read key versionId; do
+            echo "Deleting version $versionId of object $key"
+            aws s3api delete-object --bucket $BUCKET --key "$key" --version-id "$versionId"
+            done
+
+            aws s3api list-object-versions --bucket $BUCKET --output json | \
+            jq -r '.DeleteMarkers[] | "\(.Key) \(.VersionId)"' | \
+            while read key versionId; do
+            echo "Deleting delete marker version $versionId of object $key"
+            aws s3api delete-object --bucket $BUCKET --key "$key" --version-id "$versionId"
+            done
+
+            # Delete any remaining current versions (just in case)
+            aws s3 rm s3://$BUCKET --recursive || echo "Bucket $BUCKET not found or already empty"
+
+            echo "Deleting bucket: $BUCKET"
+            aws s3api delete-bucket --bucket $BUCKET || echo "Bucket $BUCKET could not be deleted (may not exist or not empty)"
+
+            set -e
+
 
       - name: Delete bootstrap stack
         run: |
