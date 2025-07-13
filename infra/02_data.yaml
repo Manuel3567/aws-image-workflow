@@ -18,6 +18,9 @@ Resources:
       BucketName: !Sub "${ApplicationName}-${Environment}-upload-bucket-${AWS::AccountId}"
       VersioningConfiguration:
         Status: Enabled  # Enable versioning
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true        
       LifecycleConfiguration:
         Rules:
           - Id: ExpireOldVersions
@@ -36,6 +39,9 @@ Resources:
       BucketName: !Sub "${ApplicationName}-${Environment}-resize-bucket-${AWS::AccountId}"
       VersioningConfiguration:
         Status: Enabled  # Enable versioning
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true        
       LifecycleConfiguration:
         Rules:
           - Id: ExpireOldVersions
