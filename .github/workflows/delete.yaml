@@ -70,17 +70,41 @@ jobs:
           aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME" || echo "Failed or already deleted"
           set -e
 
-      - name: Empty and delete upload and resize S3 buckets
+      - name: Empty and delete upload and resize S3 buckets including versions
         run: |
             set +e
             for BUCKET_SUFFIX in upload resize; do
             BUCKET="${{ env.APPLICATION_NAME }}-${{ env.ENVIRONMENT }}-${BUCKET_SUFFIX}-bucket-${{ secrets.AWS_ACCOUNT_ID }}"
-            echo "Emptying bucket: $BUCKET"
+            echo "Emptying bucket including versions: $BUCKET"
+
+            # Delete all object versions
+            aws s3api list-object-versions --bucket $BUCKET --output json | \
+            jq -r '.Versions[] | "\(.Key) \(.VersionId)"' | \
+            while read key versionId; do
+                echo "Deleting version $versionId of object $key"
+                aws s3api delete-object --bucket $BUCKET --key "$key" --version-id "$versionId"
+            done
+
+            # Delete all delete markers
+            aws s3api list-object-versions --bucket $BUCKET --output json | \
+            jq -r '.DeleteMarkers[] | "\(.Key) \(.VersionId)"' | \
+            while read key versionId; do
+                echo "Deleting delete marker version $versionId of object $key"
+                aws s3api delete-object --bucket $BUCKET --key "$key" --version-id "$versionId"
+            done
+
+            # Safety: delete current versions
             aws s3 rm s3://$BUCKET --recursive || echo "Bucket $BUCKET not found or already empty"
+
+            # Optionally disable versioning before deleting (not necessary but clean)
+            echo "Suspending versioning for bucket: $BUCKET"
+            aws s3api put-bucket-versioning --bucket $BUCKET --versioning-configuration Status=Suspended || echo "Failed to suspend versioning or bucket doesn't exist"
+
             echo "Deleting bucket: $BUCKET"
             aws s3api delete-bucket --bucket $BUCKET || echo "Bucket $BUCKET could not be deleted (may not exist or not empty)"
             done
             set -e
+
 
       - name: Delete data stack
         run: |
