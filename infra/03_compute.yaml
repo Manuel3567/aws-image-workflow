@@ -43,8 +43,7 @@ Resources:
                       - ":"
                       - !Ref "AWS::AccountId"
                       - ":table/"
-                      - !ImportValue
-                          !Sub "${ApplicationName}-${Environment}-metadata-table"
+                      - Fn::ImportValue: !Sub "${ApplicationName}-${Environment}-metadata-table"
 
               - Effect: Allow
                 Action:
@@ -53,13 +52,11 @@ Resources:
                   - !Join
                       - ""
                       - - "arn:aws:s3:::"
-                        - !ImportValue
-                            !Sub "${ApplicationName}-${Environment}-upload-bucket"
+                        - Fn::ImportValue: !Sub "${ApplicationName}-${Environment}-upload-bucket"
                   - !Join
                       - ""
                       - - "arn:aws:s3:::"
-                        - !ImportValue
-                            !Sub "${ApplicationName}-${Environment}-resize-bucket"
+                        - Fn::ImportValue: !Sub "${ApplicationName}-${Environment}-resize-bucket"
 
               - Effect: Allow
                 Action:
@@ -69,14 +66,12 @@ Resources:
                   - !Join
                       - ""
                       - - "arn:aws:s3:::"
-                        - !ImportValue
-                            !Sub "${ApplicationName}-${Environment}-upload-bucket"
+                        - Fn::ImportValue: !Sub "${ApplicationName}-${Environment}-upload-bucket"
                         - "/*"
                   - !Join
                       - ""
                       - - "arn:aws:s3:::"
-                        - !ImportValue
-                            !Sub "${ApplicationName}-${Environment}-resize-bucket"
+                        - Fn::ImportValue: !Sub "${ApplicationName}-${Environment}-resize-bucket"
                         - "/*"
 
 
